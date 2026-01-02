@@ -2,7 +2,7 @@
 
 import re
 
-# ひらがな判定
+# 難易度設定
 def is_nanika(ch):
     if ch in "あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをん":
         return 1
@@ -12,8 +12,6 @@ def is_nanika(ch):
         return 3
     return None
 
-
-# Tcode表はhttps://www5a.biglobe.ne.jp/~sunomono/tcode.html からいただいてきました。
 # Tcode表1 左手→左手 (00)
 TCODE_RAW1 = """
 "●●●●●" "●●●●●" "●●●●●" "●●●●●" "●●●●●"
@@ -117,7 +115,7 @@ def mkTcode(TCODE_RAW,lr1,lr2):
                 if is_nanika(ch)==None:
                     continue
 
-                # x1, y1 計算
+                # 階層構造整理
                 gx = (global_x+1)
                 lx = (local_x+1)
                 gy = (global_y)//4+1
@@ -139,14 +137,15 @@ def mkTcode(TCODE_RAW,lr1,lr2):
                 }
     return tcode
 
+# 実行部
 tcode = {}
 tcode.update(mkTcode(TCODE_RAW1,0,0))
 tcode.update(mkTcode(TCODE_RAW2,1,0))
 tcode.update(mkTcode(TCODE_RAW3,0,1))
 tcode.update(mkTcode(TCODE_RAW4,1,1))
 
-"""
 # 出力確認
+"""
 for k, v in tcode.items():
     print(k, v)
 """
@@ -166,4 +165,3 @@ with open(output_path, "w", encoding="utf-8") as f:
         f.write("},\n")
 
     f.write("}\n")
-
