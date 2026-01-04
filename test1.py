@@ -5,78 +5,81 @@ init()
 
 # Tcode表データ
 tcode = {
-    "ぐ": { "difc": 2, "les": 1, "fi": 33, "se": 52},
-    "ぱ": { "difc": 3, "les": 1, "fi": 11, "se": 13},
-    "ぴ": { "difc": 3, "les": 1, "fi": 11, "se": 23},
-    "ぷ": { "difc": 3, "les": 1, "fi": 11, "se": 33},
-    "ぺ": { "difc": 3, "les": 1, "fi": 11, "se": 43},
-    "ぽ": { "difc": 3, "les": 1, "fi": 11, "se": 53},
-    "ふ": { "difc": 1, "les": 1, "fi": 42, "se": 23},
-    "ぎ": { "difc": 2, "les": 1, "fi": 12, "se": 43},
-    "ね": { "difc": 1, "les": 1, "fi": 43, "se": 33},
-    "ぶ": { "difc": 2, "les": 1, "fi": 23, "se": 54},
-    "ゆ": { "difc": 1, "les": 1, "fi": 34, "se": 34},
-    "ぜ": { "difc": 2, "les": 1, "fi": 103, "se": 31},
-    "せ": { "difc": 1, "les": 1, "fi": 72, "se": 22},
-    "や": { "difc": 1, "les": 1, "fi": 62, "se": 32},
-    "ど": { "difc": 2, "les": 1, "fi": 83, "se": 12},
-    "よ": { "difc": 1, "les": 1, "fi": 73, "se": 22},
-    "か": { "difc": 1, "les": 1, "fi": 73, "se": 32},
-    "れ": { "difc": 1, "les": 1, "fi": 103, "se": 32},
-    "き": { "difc": 1, "les": 1, "fi": 63, "se": 42},
-    "く": { "difc": 1, "les": 1, "fi": 73, "se": 52},
-    "え": { "difc": 1, "les": 1, "fi": 93, "se": 52},
-    "ば": { "difc": 2, "les": 1, "fi": 84, "se": 22},
-    "も": { "difc": 1, "les": 1, "fi": 82, "se": 13},
-    "お": { "difc": 1, "les": 1, "fi": 92, "se": 13},
-    "わ": { "difc": 1, "les": 1, "fi": 62, "se": 23},
-    "ろ": { "difc": 1, "les": 1, "fi": 102, "se": 23},
-    "う": { "difc": 1, "les": 1, "fi": 62, "se": 33},
-    "あ": { "difc": 1, "les": 1, "fi": 62, "se": 43},
-    "こ": { "difc": 1, "les": 1, "fi": 72, "se": 43},
-    "さ": { "difc": 1, "les": 1, "fi": 72, "se": 53},
-    "ら": { "difc": 1, "les": 1, "fi": 82, "se": 53},
-    "と": { "difc": 1, "les": 1, "fi": 73, "se": 13},
-    "て": { "difc": 1, "les": 1, "fi": 93, "se": 13},
-    "る": { "difc": 1, "les": 1, "fi": 103, "se": 13},
-    "し": { "difc": 1, "les": 1, "fi": 73, "se": 23},
-    "た": { "difc": 1, "les": 1, "fi": 83, "se": 23},
-    "が": { "difc": 2, "les": 1, "fi": 103, "se": 23},
-    "い": { "difc": 1, "les": 1, "fi": 63, "se": 33},
+    "ぐ": { "difc": 1, "les": 999, "fi": 33, "se": 52},
+    "ぱ": { "difc": 1, "les": 999, "fi": 11, "se": 13},
+    "ぴ": { "difc": 1, "les": 999, "fi": 11, "se": 23},
+    "ぷ": { "difc": 1, "les": 999, "fi": 11, "se": 33},
+    "ぺ": { "difc": 1, "les": 999, "fi": 11, "se": 43},
+    "ぽ": { "difc": 1, "les": 999, "fi": 11, "se": 53},
+    "ふ": { "difc": 1, "les": 999, "fi": 42, "se": 23},
+    "ぎ": { "difc": 1, "les": 999, "fi": 12, "se": 43},
+    "ね": { "difc": 1, "les": 999, "fi": 43, "se": 33},
+    "ぶ": { "difc": 1, "les": 999, "fi": 23, "se": 54},
+    "ゆ": { "difc": 1, "les": 999, "fi": 34, "se": 34},
+    "ぜ": { "difc": 1, "les": 999, "fi": 103, "se": 31},
+    "せ": { "difc": 1, "les": 999, "fi": 72, "se": 22},
+    "や": { "difc": 1, "les": 999, "fi": 62, "se": 32},
+    "ど": { "difc": 1, "les": 999, "fi": 83, "se": 12},
+    "よ": { "difc": 1, "les": 999, "fi": 73, "se": 22},
+    "か": { "difc": 1, "les": 999, "fi": 73, "se": 32},
+    "れ": { "difc": 1, "les": 999, "fi": 103, "se": 32},
+    "き": { "difc": 1, "les": 999, "fi": 63, "se": 42},
+    "く": { "difc": 1, "les": 999, "fi": 73, "se": 52},
+    "え": { "difc": 1, "les": 999, "fi": 93, "se": 52},
+    "ば": { "difc": 1, "les": 999, "fi": 84, "se": 22},
+    "も": { "difc": 1, "les": 999, "fi": 82, "se": 13},
+    "お": { "difc": 1, "les": 999, "fi": 92, "se": 13},
+    "わ": { "difc": 1, "les": 999, "fi": 62, "se": 23},
+    "ろ": { "difc": 1, "les": 999, "fi": 102, "se": 23},
+    "う": { "difc": 1, "les": 999, "fi": 62, "se": 33},
+    "あ": { "difc": 1, "les": 999, "fi": 62, "se": 43},
+    "こ": { "difc": 1, "les": 999, "fi": 72, "se": 43},
+    "さ": { "difc": 1, "les": 999, "fi": 72, "se": 53},
+    "ら": { "difc": 1, "les": 999, "fi": 82, "se": 53},
+    "と": { "difc": 1, "les": 999, "fi": 73, "se": 13},
+    "て": { "difc": 1, "les": 999, "fi": 93, "se": 13},
+    "る": { "difc": 1, "les": 5, "fi": 103, "se": 13},
+    "し": { "difc": 1, "les": 5, "fi": 73, "se": 23},
+    "た": { "difc": 1, "les": 4, "fi": 83, "se": 23},
+    "が": { "difc": 1, "les": 1, "fi": 103, "se": 23},
+    "い": { "difc": 1, "les": 5, "fi": 63, "se": 33},
+    "、": { "difc": 1, "les": 1, "fi": 73, "se": 33},
     "の": { "difc": 1, "les": 1, "fi": 83, "se": 33},
-    "で": { "difc": 2, "les": 1, "fi": 63, "se": 53},
-    "は": { "difc": 1, "les": 1, "fi": 73, "se": 53},
-    "に": { "difc": 1, "les": 1, "fi": 83, "se": 53},
-    "な": { "difc": 1, "les": 1, "fi": 93, "se": 53},
-    "を": { "difc": 1, "les": 1, "fi": 103, "se": 53},
-    "ち": { "difc": 1, "les": 1, "fi": 104, "se": 13},
-    "ん": { "difc": 1, "les": 1, "fi": 64, "se": 33},
-    "ま": { "difc": 1, "les": 1, "fi": 74, "se": 33},
-    "つ": { "difc": 1, "les": 1, "fi": 94, "se": 33},
-    "け": { "difc": 1, "les": 1, "fi": 64, "se": 43},
-    "す": { "difc": 1, "les": 1, "fi": 84, "se": 43},
-    "み": { "difc": 1, "les": 1, "fi": 104, "se": 53},
-    "ぢ": { "difc": 2, "les": 1, "fi": 81, "se": 44},
-    "ほ": { "difc": 1, "les": 1, "fi": 102, "se": 14},
-    "じ": { "difc": 2, "les": 1, "fi": 72, "se": 24},
-    "だ": { "difc": 2, "les": 1, "fi": 63, "se": 34},
-    "り": { "difc": 1, "les": 1, "fi": 73, "se": 34},
-    "め": { "difc": 1, "les": 1, "fi": 93, "se": 34},
-    "そ": { "difc": 1, "les": 1, "fi": 103, "se": 54},
-    "ず": { "difc": 2, "les": 1, "fi": 84, "se": 14},
-    "げ": { "difc": 2, "les": 1, "fi": 104, "se": 14},
-    "ざ": { "difc": 2, "les": 1, "fi": 43, "se": 92},
-    "づ": { "difc": 2, "les": 1, "fi": 32, "se": 83},
-    "ぬ": { "difc": 1, "les": 1, "fi": 13, "se": 94},
-    "ぼ": { "difc": 2, "les": 1, "fi": 34, "se": 74},
-    "び": { "difc": 2, "les": 1, "fi": 73, "se": 92},
-    "ぞ": { "difc": 2, "les": 1, "fi": 94, "se": 72},
-    "む": { "difc": 1, "les": 1, "fi": 62, "se": 63},
-    "べ": { "difc": 2, "les": 1, "fi": 62, "se": 93},
-    "へ": { "difc": 1, "les": 1, "fi": 103, "se": 103},
-    "ご": { "difc": 2, "les": 1, "fi": 104, "se": 83},
-    "ひ": { "difc": 1, "les": 1, "fi": 74, "se": 94},
+    "。": { "difc": 1, "les": 4, "fi": 63, "se": 43},
+    "で": { "difc": 1, "les": 3, "fi": 63, "se": 53},
+    "は": { "difc": 1, "les": 2, "fi": 73, "se": 53},
+    "に": { "difc": 1, "les": 2, "fi": 83, "se": 53},
+    "な": { "difc": 1, "les": 4, "fi": 93, "se": 53},
+    "を": { "difc": 1, "les": 3, "fi": 103, "se": 53},
+    "ち": { "difc": 1, "les": 999, "fi": 104, "se": 13},
+    "ん": { "difc": 1, "les": 999, "fi": 64, "se": 33},
+    "ま": { "difc": 1, "les": 999, "fi": 74, "se": 33},
+    "つ": { "difc": 1, "les": 999, "fi": 94, "se": 33},
+    "け": { "difc": 1, "les": 999, "fi": 64, "se": 43},
+    "す": { "difc": 1, "les": 999, "fi": 84, "se": 43},
+    "み": { "difc": 1, "les": 999, "fi": 104, "se": 53},
+    "ぢ": { "difc": 1, "les": 999, "fi": 81, "se": 44},
+    "ほ": { "difc": 1, "les": 999, "fi": 102, "se": 14},
+    "じ": { "difc": 1, "les": 999, "fi": 72, "se": 24},
+    "だ": { "difc": 1, "les": 999, "fi": 63, "se": 34},
+    "り": { "difc": 1, "les": 999, "fi": 73, "se": 34},
+    "め": { "difc": 1, "les": 999, "fi": 93, "se": 34},
+    "そ": { "difc": 1, "les": 999, "fi": 103, "se": 54},
+    "ず": { "difc": 1, "les": 999, "fi": 84, "se": 14},
+    "げ": { "difc": 1, "les": 999, "fi": 104, "se": 14},
+    "ざ": { "difc": 1, "les": 999, "fi": 43, "se": 92},
+    "づ": { "difc": 1, "les": 999, "fi": 32, "se": 83},
+    "ぬ": { "difc": 1, "les": 999, "fi": 13, "se": 94},
+    "ぼ": { "difc": 1, "les": 999, "fi": 34, "se": 74},
+    "び": { "difc": 1, "les": 999, "fi": 73, "se": 92},
+    "ぞ": { "difc": 1, "les": 999, "fi": 94, "se": 72},
+    "む": { "difc": 1, "les": 999, "fi": 62, "se": 63},
+    "べ": { "difc": 1, "les": 999, "fi": 62, "se": 93},
+    "へ": { "difc": 1, "les": 999, "fi": 103, "se": 103},
+    "ご": { "difc": 1, "les": 999, "fi": 104, "se": 83},
+    "ひ": { "difc": 1, "les": 999, "fi": 74, "se": 94},
 }
+
 # キーボード配列データ
 PCkey = {
     "1": {
@@ -241,13 +244,23 @@ PCkey = {
     },
 }
 
+# 選択肢
+def select():
+    while True:
+        sel = msvcrt.getch()
+        if sel == b"d":
+            return 1
+        if sel == b"k":
+            return 2
+        if sel == b"\x03":
+            exit()
 
-# 指定難易度の文字リストを作成
+# 指定難易度以下の文字リストを作成
 def makeChList(difc):
     Chlist = []
 
     for v in tcode:
-        if tcode[v].get("difc") == difc:
+        if tcode[v].get("difc") <= difc:
             Chlist.append(v)
     
     if Chlist == []:
@@ -256,12 +269,30 @@ def makeChList(difc):
     
     return Chlist
 
+# 指定レッスン以下の文字リストを作成
+def makeChList_les(les):
+    Chlist = []
+
+    for v in tcode:
+        if tcode[v].get("les") <= les:
+            Chlist.append(v)
+    
+    if Chlist == []:
+        print("ERROR: No Character Found with Specified Lesson")
+        return None
+    
+    return Chlist
+
 # 文字列の座標化
 def Chnum(S):
     aStr = ""
     for i, Ch in enumerate(S):
-        acol = PCkey[Ch].get("col")
-        arow = PCkey[Ch].get("row")
+        if Ch not in PCkey:
+            acol = "x"
+            arow = "x"
+        else:
+            acol = PCkey[Ch].get("col")
+            arow = PCkey[Ch].get("row")
         if i == 0:
             aStr = str(acol) + str(arow)
         else:
@@ -289,21 +320,39 @@ def quiz(Chlist):
 
     else:
         print ("Correct Answer:", caNum)
-    replay = input ("press "+Fore.GREEN+"d"+Fore.WHITE+" to replay")
+    
+    print(Fore.GREEN+"a"+Fore.WHITE+":replay",  Fore.GREEN+"n"+Fore.WHITE+":continue")
+    while True:
+        replay = msvcrt.getch()
+        if replay == b"a":
+            return qCh
+        if replay == b"n":
+            return None
+        if replay == b"\x03":
+            exit()
 
-    if replay == "d":
-        return qCh
-    else: return None
-
-# 難易度入力
-while True:
-    difc = input("Difficulty Level:")
-    if str.isdigit(difc) == False:
-        print("ERROR: Difficulty Level Must Be a Number")
-    else:
-        difc = int(difc)
-        Chlist = makeChList(difc)
-        if Chlist != None:break
+# 難易度等入力
+print ("Select Quiz Mode:")
+print(Fore.GREEN+"d"+Fore.WHITE+":Difficulty",  Fore.GREEN+"k"+Fore.WHITE+":Lesson")
+sel = select()
+if sel == 1:
+    while True:
+        difc = input("Difficulty Level:")
+        if str.isdigit(difc) == False:
+            print("ERROR: Difficulty Level Must Be a Number")
+        else:
+            difc = int(difc)
+            Chlist = makeChList(difc)
+            if Chlist != None:break
+if sel == 2:
+    while True:
+        les = input("Lesson Level:")
+        if str.isdigit(les) == False:
+            print("ERROR: Lesson Level Must Be a Number")
+        else:
+            les = int(les)
+            Chlist = makeChList_les(les)
+            if Chlist != None:break
 
 # quiz動作部分
 curChlist = Chlist

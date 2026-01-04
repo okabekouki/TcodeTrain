@@ -4,13 +4,29 @@ import re
 
 # 難易度設定
 def is_nanika(ch):
-    if ch in "あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをん":
+    if ch in "、。あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをん":
         return 1
     if ch in "がぎぐげござじずぜぞだぢづでどばびぶべぼゔ":
-        return 2
+        return 1
     if ch in "ぱぴぷぺぽ":
-        return 3
+        return 1
     return None
+
+# レッスン番号設定
+def is_lesson(ch):
+    for l in lesson:
+        if ch in lesson[l]:
+            return l
+    return 999
+
+# レッスン番号定義
+lesson = {
+    1 : "、のが",
+    2 : "には",
+    3 : "でにはを",
+    4 : "。たな",
+    5 : "いしる",
+}
 
 # Tcode表1 左手→左手 (00)
 TCODE_RAW1 = """
@@ -131,7 +147,7 @@ def mkTcode(TCODE_RAW,lr1,lr2):
 
                 tcode[ch] = {
                     "difc": is_nanika(ch),
-                    "les": 1,
+                    "les": is_lesson(ch),
                     "fi": fi,
                     "se": se,
                 }
