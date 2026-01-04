@@ -1,6 +1,12 @@
 # 概要
 「Tcodeを練習したいな」と「pythonの練習をしたいな」が組み合わさって作っています。主に後者
 
+# 環境構築
+windowsの方は以下のコードを入れ、cursesのwindows版を入れてください。
+```
+pip install windows-curses
+```
+
 # ファイル構成
 現在はtest1.pyがゲーム実行部です。何らかの手段でtest1.pyを動かせばターミナルでスタートします。
 

@@ -1,7 +1,8 @@
 import getpass
-import msvcrt
 from colorama import Fore, Style, init
 init()
+import curses
+stdscr = curses.initscr()
 
 # Tcode表データ
 tcode = {
@@ -247,13 +248,11 @@ PCkey = {
 # 選択肢
 def select():
     while True:
-        sel = msvcrt.getch()
-        if sel == b"d":
+        sel = stdscr.getch()
+        if sel == ord("d"):
             return 1
-        if sel == b"k":
+        if sel == ord("k"):
             return 2
-        if sel == b"\x03":
-            exit()
 
 # 指定難易度以下の文字リストを作成
 def makeChList(difc):
@@ -323,10 +322,10 @@ def quiz(Chlist):
     
     print(Fore.GREEN+"a"+Fore.WHITE+":replay",  Fore.GREEN+"n"+Fore.WHITE+":continue")
     while True:
-        replay = msvcrt.getch()
-        if replay == b"a":
+        replay = stdscr.getch()
+        if replay == ord("a"):
             return qCh
-        if replay == b"n":
+        if replay == ord(b"n"):
             return None
         if replay == b"\x03":
             exit()
