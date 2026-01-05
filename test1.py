@@ -1,8 +1,6 @@
 import getpass
 from colorama import Fore, Style, init
 init()
-import curses
-stdscr = curses.initscr()
 
 # Tcode表データ
 tcode = {
@@ -247,12 +245,11 @@ PCkey = {
 
 # 選択肢
 def select():
-    while True:
-        sel = stdscr.getch()
-        if sel == ord("d"):
-            return 1
-        if sel == ord("k"):
-            return 2
+    sel = input()
+    if sel == "d":
+        return 1
+    if sel == "k":
+        return 2
 
 # 指定難易度以下の文字リストを作成
 def makeChList(difc):
@@ -321,14 +318,11 @@ def quiz(Chlist):
         print ("Correct Answer:", caNum)
     
     print(Fore.GREEN+"a"+Fore.WHITE+":replay",  Fore.GREEN+"n"+Fore.WHITE+":continue")
-    while True:
-        replay = stdscr.getch()
-        if replay == ord("a"):
-            return qCh
-        if replay == ord(b"n"):
-            return None
-        if replay == b"\x03":
-            exit()
+    replay = input()
+    if replay == "a":
+        return qCh
+    if replay == "n":
+        return None
 
 # 難易度等入力
 print ("Select Quiz Mode:")
@@ -352,6 +346,9 @@ if sel == 2:
             les = int(les)
             Chlist = makeChList_les(les)
             if Chlist != None:break
+
+print (Chlist)
+a = input ("hogehoge-")
 
 # quiz動作部分
 curChlist = Chlist
