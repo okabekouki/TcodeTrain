@@ -256,11 +256,11 @@ def select():
             exit()
 
 # 指定難易度以下の文字リストを作成
-def makeChList(difc):
+def makeChList(difc1,difc2):
     Chlist = []
 
     for v in tcode:
-        if tcode[v].get("difc") <= difc:
+        if (tcode[v].get("difc") >= difc1) and (tcode[v].get("difc") <= difc2):
             Chlist.append(v)
     
     if Chlist == []:
@@ -270,11 +270,11 @@ def makeChList(difc):
     return Chlist
 
 # 指定レッスン以下の文字リストを作成
-def makeChList_les(les):
+def makeChList_les(les1,les2):
     Chlist = []
 
     for v in tcode:
-        if tcode[v].get("les") <= les:
+        if (tcode[v].get("les") >= les1) and (tcode[v].get("les") <= les2):
             Chlist.append(v)
     
     if Chlist == []:
@@ -337,22 +337,42 @@ print(Fore.GREEN+"d"+Fore.WHITE+":Difficulty",  Fore.GREEN+"k"+Fore.WHITE+":Less
 sel = select()
 if sel == 1:
     while True:
-        difc = input("Difficulty Level:")
-        if str.isdigit(difc) == False:
+        difc1 = input("Min Difficulty Level:")
+        if str.isdigit(difc1) == False:
             print("ERROR: Difficulty Level Must Be a Number")
         else:
-            difc = int(difc)
-            Chlist = makeChList(difc)
-            if Chlist != None:break
+            difc1 = int(difc1)
+            break
+    while True:
+        difc2 = input("Max Difficulty Level:")
+        if str.isdigit(difc2) == False:
+            print("ERROR: Difficulty Level Must Be a Number")
+        else:
+            difc2 = int(difc2)
+            if difc2 < difc1:
+                print("ERROR: Max Difficulty Level Must Be Greater Than or Equal to Min Difficulty Level")
+            else:
+                Chlist = makeChList(difc1,difc2)
+                if Chlist != None:break
 if sel == 2:
     while True:
-        les = input("Lesson Level:")
-        if str.isdigit(les) == False:
+        les1 = input("Min Lesson Level:")
+        if str.isdigit(les1) == False:
             print("ERROR: Lesson Level Must Be a Number")
         else:
-            les = int(les)
-            Chlist = makeChList_les(les)
-            if Chlist != None:break
+            les1 = int(les1)
+            break
+    while True:
+        les2 = input("Max Lesson Level:")
+        if str.isdigit(les2) == False:
+            print("ERROR: Lesson Level Must Be a Number")
+        else:
+            les2 = int(les2)
+            if les2 < les1:
+                print("ERROR: Max Lesson Level Must Be Greater Than or Equal to Min Lesson Level")
+            else:
+                Chlist = makeChList_les(les1,les2)
+                if Chlist != None:break
 
 # quiz動作部分
 curChlist = Chlist
