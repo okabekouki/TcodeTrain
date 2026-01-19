@@ -314,12 +314,12 @@ def quiz(Chlist):
 
     # 答え合わせ
     caNum = str(tcode[qCh].get("fi")) +" "+ str(tcode[qCh].get("se"))
-    print ("   Your Answer:", uaNum)
+    print ("    Your Answer:", uaNum)
     if uaNum == caNum:
         print (Fore.BLUE,"Correct Answer:", caNum,Fore.WHITE)
 
     else:
-        print ("Correct Answer:", caNum)
+        print (" Correct Answer:", caNum)
     
     print(Fore.GREEN+"a"+Fore.WHITE+":replay",  Fore.GREEN+"n"+Fore.WHITE+":continue")
     while True:
