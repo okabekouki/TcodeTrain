@@ -1,7 +1,7 @@
 import math
 import random
 
-Ch = ["a","b","c","d"]
+Chlist = ["a","b","c","d"]
 
 def starter(Ch):
     Chdict = {}
@@ -28,8 +28,28 @@ def Que(Chdict):
         if v["F"] >= NumRandom:
             return i
 
+# 出題
+def Q_A(i):
+    print(i)
+    a = input()
+    if a == i:
+        print("Correct")
+        return True
+    else:
+        print("Wrong")
+        return False
+
+# dictへの補正
+def DictAdjust(Chdict,QueBool,QueCh):
+    if QueBool == True:
+        Chdict[QueCh]["f"] = Chdict[QueCh]["f"] * 0.7
+    else:
+        Chdict[QueCh]["f"] = Chdict[QueCh]["f"] * 1.3
+    return Chdict
 
 
-
-Chdict = starter(Ch)
-print(Que(Chdict))
+Chdict = starter(Chlist)
+while True:
+    QueCh = Que(Chdict)
+    QueBool = Q_A(QueCh)
+    Chdict = DictAdjust(Chdict,QueBool,QueCh)
