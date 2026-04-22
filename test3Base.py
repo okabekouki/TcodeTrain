@@ -1,6 +1,7 @@
 import math
 import tcodeData_generated
 import PCkey
+import random
 
 # 指定難易度以下の文字リストを作成
 def makeChList(difc1,difc2):
@@ -47,3 +48,14 @@ def Chnum(S):
     return aStr
 
 # 次の問題作成
+# 問題生成（1問）
+def makeQuestion(Chlist):
+    if Chlist is None or len(Chlist) == 0:
+        return None
+    return random.choice(Chlist)
+
+# 正解座標を取得
+def getCorrectNum(qCh):
+    if qCh is None:
+        return None
+    return str(tcodeData_generated.tcode[qCh].get("fi")) + " " + str(tcodeData_generated.tcode[qCh].get("se"))
