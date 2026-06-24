@@ -22,7 +22,7 @@ excluded_chars = []  # 一時的に除外する文字リスト
 
 def UnifiedKeyInput(Event):
     """統合されたキー入力処理"""
-    global state, mode, excluded_chars
+    global state, mode, excluded_chars, qCh
 
     if state == STATE_MODE:
         excluded_chars.clear()  # モード選択時に除外リストをリセット
@@ -48,11 +48,14 @@ def UnifiedKeyInput(Event):
             updateGuide()
             return "break"
         elif Event.char == "n":
-            # 次の問題へ（その時の文字を一時的に除外）
+            # 次の問題へ（前回の除外を解除してから、今回の文字を一時的に除外）
             L1.config(text="")
             L2.config(text="")
-            # 除外文字リストに追加
-            if qCh not in excluded_chars:
+            # 前回の除外を解除（次回continue時に戻す）
+            if excluded_chars:
+                excluded_chars.clear()
+            # 今回の問題を一時除外
+            if qCh is not None:
                 excluded_chars.append(qCh)
             state = STATE_QUIZ
             nextQuestion()
@@ -132,6 +135,21 @@ def Space(Event=None):
     global state, mode, val1, val2, Chlist, Chdict, qCh, excluded_chars
 
     text = Disp1.get().strip()
+
+    # ===== リトライ状態でのSpaceはContinueとして動作させる =====
+    if state == STATE_RETRY:
+        # 次の問題へ（前回の除外を解除してから、今回の文字を一時的に除外）
+        L1.config(text="")
+        L2.config(text="")
+        if excluded_chars:
+            excluded_chars.clear()
+        if qCh is not None:
+            excluded_chars.append(qCh)
+        state = STATE_QUIZ
+        nextQuestion()
+        updateGuide()
+        if Event:
+            return "break"
 
     # ===== モード選択 =====
     if state == STATE_MODE:
