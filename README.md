@@ -8,8 +8,10 @@
 pip install colorama
 ```
 
+**現在(test5.py)ではこれをインストールする必要はありません．**
+
 # ファイル構成
-現在はtest1.pyがゲーム実行部です。何らかの手段でtest1.pyを動かせばターミナルでスタートします。
+現在はtest5.pyがゲーム実行部です。何らかの手段でtest5.pyを動かせばターミナルでスタートします。
 
 tcodeData_Maker.pyはゲームで利用するtcodeのリストをtcodeData_generated.pyに生み出すコードです。
 
@@ -21,3 +23,5 @@ tcodeData_Maker.pyはゲームで利用するtcodeのリストをtcodeData_gener
 [Python colorama 色メモ（Cmder環境）](https://qiita.com/ymdymd/items/83aca4134c59b0228659):出力の色調整方法を学んだ。ただ環境によって異なるっぽい？
 
 [chatGPT](https://chatgpt.com):愛してる
+
+[Codex](https://marketplace.visualstudio.com/items?itemName=openai.chatgpt):愛してる part2
