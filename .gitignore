@@ -1,2 +1,5 @@
 /__pycache__/*
 !/__pycache__/.gitkeep
+/test6/__pycache__/
+/test6/tests/__pycache__/
+/test6/user_data/
