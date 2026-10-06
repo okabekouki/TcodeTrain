@@ -19,6 +19,7 @@ from typing import Callable, Iterable
 APP_DIR = Path(__file__).resolve().parent
 LEGACY_SOURCE = APP_DIR.parent / "tcodeData_Maker.py"
 PROGRESS_PATH = APP_DIR / "user_data" / "progress.json"
+LESSON_TEXT_PATH = APP_DIR / "data" / "lesson_texts.json"
 
 KEY_ROWS = ("1234567890", "qwertyuiop", "asdfghjkl;", "zxcvbnm,./")
 KEY_TO_POS = {
@@ -114,6 +115,18 @@ def lesson_chars(start: int, end: int | None = None) -> list[str]:
     return list(dict.fromkeys("".join(LESSONS[number] for number in numbers)))
 
 
+def load_lesson_texts(path: Path = LESSON_TEXT_PATH) -> dict[int, list[str]]:
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(data, dict):
+        raise ValueError("文章Lessonデータの形式が不正です")
+    result: dict[int, list[str]] = {}
+    for number, lines in data.items():
+        if not isinstance(lines, list) or not lines or not all(isinstance(line, str) for line in lines):
+            raise ValueError(f"Lesson {number} の文章データが不正です")
+        result[int(number)] = lines
+    return result
+
+
 def _extract_legacy_tables(source: str) -> dict[str, str]:
     pattern = re.compile(r'^(TCODE_RAW[1-4])\s*=\s*"""(.*?)"""', re.MULTILINE | re.DOTALL)
     tables = dict(pattern.findall(source))
@@ -157,6 +170,8 @@ def load_tcode_table(path: Path = LEGACY_SOURCE) -> dict[str, TcodeEntry]:
     # The source table uses the typographic full-width minus for this dash.
     if "―" not in result and "－" in result:
         result["―"] = result["－"]
+    if "—" not in result and "－" in result:
+        result["—"] = result["－"]
     missing = sorted(set("".join(LESSONS.values())) - result.keys())
     if missing:
         raise ValueError("Lesson文字がT-Code表にありません: " + " ".join(missing))
@@ -225,6 +240,56 @@ class Scheduler:
         return chosen
 
 
+class SentenceCursor:
+    """Supply T-Code characters in lesson-text order, skipping ASCII spaces."""
+
+    SEPARATORS = {" "}
+
+    def __init__(self, lines: Iterable[str], table: dict[str, TcodeEntry]):
+        self.lines = list(lines)
+        if not self.lines:
+            raise ValueError("文章Lessonに練習行がありません")
+        unknown = sorted({char for line in self.lines for char in line
+                          if char not in table and char not in self.SEPARATORS})
+        if unknown:
+            raise ValueError("文章にT-Code未対応文字があります: " + " ".join(unknown))
+        self.line_index = 0
+        self.char_index = 0
+        self.done = False
+        self._skip_separators_and_empty_lines()
+
+    @property
+    def current(self) -> str:
+        if self.done:
+            raise IndexError("sentence is complete")
+        return self.lines[self.line_index][self.char_index]
+
+    @property
+    def total_chars(self) -> int:
+        return sum(char not in self.SEPARATORS for line in self.lines for char in line)
+
+    @property
+    def completed_lines(self) -> int:
+        return len(self.lines) if self.done else self.line_index
+
+    def advance(self) -> None:
+        if self.done:
+            return
+        self.char_index += 1
+        self._skip_separators_and_empty_lines()
+
+    def _skip_separators_and_empty_lines(self) -> None:
+        while self.line_index < len(self.lines):
+            line = self.lines[self.line_index]
+            while self.char_index < len(line) and line[self.char_index] in self.SEPARATORS:
+                self.char_index += 1
+            if self.char_index < len(line):
+                return
+            self.line_index += 1
+            self.char_index = 0
+        self.done = True
+
+
 class Session:
     def __init__(
         self,
@@ -234,11 +299,13 @@ class Session:
         question_limit: int,
         rng: random.Random | None = None,
         clock: Callable[[], float] = time.perf_counter,
+        sentence_lines: Iterable[str] | None = None,
     ):
         self.table = table
         self.stats = stats
-        self.limit = question_limit
-        self.scheduler = Scheduler(chars, stats, rng)
+        self.sentence = SentenceCursor(sentence_lines, table) if sentence_lines is not None else None
+        self.limit = self.sentence.total_chars if self.sentence else question_limit
+        self.scheduler = None if self.sentence else Scheduler(chars, stats, rng)
         self.clock = clock
         self.state = State.SETUP
         self.current = ""
@@ -247,6 +314,12 @@ class Session:
         self.completed = self.correct = self.corrections = 0
         self.timings: list[tuple[str, float, float, float]] = []
         self.wrong_chars: Counter[str] = Counter()
+        self.started_at = self.finished_at = 0.0
+        self._advance_sentence = False
+
+    @property
+    def is_sentence(self) -> bool:
+        return self.sentence is not None
 
     @property
     def entry(self) -> TcodeEntry:
@@ -256,12 +329,26 @@ class Session:
         self.next_question()
 
     def next_question(self) -> None:
-        if self.completed >= self.limit:
+        if self.sentence and self._advance_sentence:
+            self.sentence.advance()
+            self._advance_sentence = False
+        if self.sentence and self.sentence.done:
+            self.finished_at = self.clock()
             self.state = State.RESULT
             return
-        self.current = self.scheduler.choose()
+        if self.completed >= self.limit:
+            self.finished_at = self.clock()
+            self.state = State.RESULT
+            return
+        if self.sentence:
+            self.current = self.sentence.current
+        else:
+            assert self.scheduler is not None
+            self.current = self.scheduler.choose()
         self.first_input = None
         self.t0 = self.clock()
+        if not self.started_at:
+            self.started_at = self.t0
         self.state = State.WAIT_FIRST
 
     def normal_input(self, pos: KeyPos) -> str:
@@ -288,12 +375,14 @@ class Session:
             stat.correct_first_try += 1
             stat.weight = max(MIN_WEIGHT, stat.weight * CORRECT_FACTOR)
             self.correct += 1
+            self._advance_sentence = self.sentence is not None
             self.state = State.CORRECT_FEEDBACK
             return "correct"
         stat.wrong += 1
         stat.weight = min(MAX_WEIGHT, stat.weight * WRONG_FACTOR)
         self.wrong_chars[self.current] += 1
-        self.scheduler.schedule_retry(self.current)
+        if self.scheduler is not None:
+            self.scheduler.schedule_retry(self.current)
         self.state = State.CORRECTION_FIRST
         return "wrong"
 
@@ -306,6 +395,7 @@ class Session:
         if self.state == State.CORRECTION_SECOND:
             if pos == self.entry.second:
                 self.corrections += 1
+                self._advance_sentence = self.sentence is not None
                 return "correction_done"
             self.state = State.CORRECTION_FIRST
             return "correction_restart"
@@ -334,12 +424,14 @@ class TcodeTrainApp(tk.Tk):
         self.minsize(760, 600)
         self.store = ProgressStore()
         self.stats = self.store.load()
+        self.lesson_texts: dict[int, list[str]] = {}
         self.session: Session | None = None
         self.table: dict[str, TcodeEntry] = {}
         self.feedback_job: str | None = None
         self.protocol("WM_DELETE_WINDOW", self.close)
         try:
             self.table = load_tcode_table()
+            self.lesson_texts = load_lesson_texts()
         except (OSError, UnicodeError, ValueError) as exc:
             messagebox.showerror("データエラー", str(exc), parent=self)
             self.after_idle(self.destroy)
@@ -364,12 +456,15 @@ class TcodeTrainApp(tk.Tk):
         form.pack()
         lesson_values = [str(number) for number in sorted(LESSONS)]
         self.mode_var = tk.StringVar(value="Lesson範囲")
+        self.form_var = tk.StringVar(value="単字")
         self.start_var = tk.StringVar(value="1")
         self.end_var = tk.StringVar(value="5")
         self.count_var = tk.IntVar(value=30)
         self.hint_var = tk.IntVar(value=1)
         self.direct_var = tk.StringVar()
         rows = [
+            ("練習形式", ttk.Combobox(form, textvariable=self.form_var, state="readonly", width=22,
+             values=("単字", "文章"))),
             ("練習モード", ttk.Combobox(form, textvariable=self.mode_var, state="readonly", width=22,
              values=("単一Lesson", "Lesson範囲", "苦手文字", "文字直接指定", "全対象文字"))),
             ("開始Lesson", ttk.Combobox(form, textvariable=self.start_var, state="readonly", width=22, values=lesson_values)),
@@ -413,13 +508,21 @@ class TcodeTrainApp(tk.Tk):
 
     def begin(self) -> None:
         try:
-            chars, self.session_label = self.selected_chars()
-            if not chars:
-                raise ValueError("この条件には練習対象がありません")
-            limit = int(self.count_var.get())
-            if limit < 1:
-                raise ValueError("出題数は1以上にしてください")
-            self.session = Session(self.table, chars, self.stats, limit)
+            if self.form_var.get() == "文章":
+                lesson = int(self.start_var.get())
+                if lesson < 5 or lesson not in self.lesson_texts:
+                    raise ValueError("文章モードは本文のあるLesson 5以降を選んでください")
+                lines = self.lesson_texts[lesson]
+                self.session_label = f"文章 Lesson {lesson}"
+                self.session = Session(self.table, (), self.stats, 0, sentence_lines=lines)
+            else:
+                chars, self.session_label = self.selected_chars()
+                if not chars:
+                    raise ValueError("この条件には練習対象がありません")
+                limit = int(self.count_var.get())
+                if limit < 1:
+                    raise ValueError("出題数は1以上にしてください")
+                self.session = Session(self.table, chars, self.stats, limit)
         except (TypeError, ValueError) as exc:
             messagebox.showwarning("設定を確認してください", str(exc), parent=self)
             return
@@ -438,6 +541,13 @@ class TcodeTrainApp(tk.Tk):
         self.progress_text.pack(side="right")
         self.char_text = ttk.Label(frame, font=("Yu Gothic UI", 72, "bold"), anchor="center")
         self.char_text.pack(pady=(48, 12))
+        self.sentence_text = tk.Text(frame, height=3, wrap="word", font=("Yu Gothic UI", 19),
+                                     relief="flat", borderwidth=0, cursor="arrow")
+        self.sentence_text.tag_configure("current", background="#ffd966", underline=True,
+                                         font=("Yu Gothic UI", 21, "bold"))
+        if self.session and self.session.is_sentence:
+            self.char_text.pack_forget()
+            self.sentence_text.pack(fill="x", padx=30, pady=(38, 12))
         self.status_text = ttk.Label(frame, font=("Yu Gothic UI", 16), anchor="center")
         self.status_text.pack(pady=6)
         self.detail_text = ttk.Label(frame, font=("Yu Gothic UI", 12), anchor="center", justify="center")
@@ -470,7 +580,19 @@ class TcodeTrainApp(tk.Tk):
             self.show_result()
             return
         self.reset_keys()
-        self.char_text.configure(text=self.session.current)
+        if self.session.is_sentence:
+            assert self.session.sentence is not None
+            cursor = self.session.sentence
+            line = cursor.lines[cursor.line_index]
+            self.sentence_text.configure(state="normal")
+            self.sentence_text.delete("1.0", "end")
+            self.sentence_text.insert("1.0", line)
+            start = f"1.{cursor.char_index}"
+            self.sentence_text.tag_add("current", start, f"{start}+1c")
+            self.sentence_text.see(start)
+            self.sentence_text.configure(state="disabled")
+        else:
+            self.char_text.configure(text=self.session.current)
         self.status_text.configure(text="第1打鍵待ち")
         entry = self.session.entry
         hint = self.hint_var.get()
@@ -484,7 +606,14 @@ class TcodeTrainApp(tk.Tk):
             self.detail_text.configure(text="")
         done, total = self.session.completed, self.session.limit
         rate = self.session.correct / done * 100 if done else 0
-        self.progress_text.configure(text=f"{done} / {total}　初回正答率 {rate:.0f}%")
+        if self.session.is_sentence and self.session.sentence:
+            line = self.session.sentence.line_index + 1
+            line_total = len(self.session.sentence.lines)
+            self.progress_text.configure(
+                text=f"行 {line}/{line_total}　{done}/{total}文字　初回正答率 {rate:.0f}%"
+            )
+        else:
+            self.progress_text.configure(text=f"{done} / {total}　初回正答率 {rate:.0f}%")
 
     def on_key(self, event: tk.Event) -> str | None:
         assert self.session is not None
@@ -556,6 +685,14 @@ class TcodeTrainApp(tk.Tk):
             f"訂正完了数: {self.session.corrections}", f"平均総反応時間: {averages[2]:.0f} ms",
             f"平均第1打鍵: {averages[0]:.0f} ms", f"平均第2打鍵間隔: {averages[1]:.0f} ms",
         )
+        if self.session.is_sentence and self.session.sentence:
+            elapsed = max(0.0, self.session.finished_at - self.session.started_at)
+            per_minute = count / elapsed * 60 if elapsed else 0.0
+            lines += (
+                f"完了行数: {self.session.sentence.completed_lines}",
+                f"総所要時間: {elapsed:.1f} 秒",
+                f"入力速度: {per_minute:.1f} 文字/分",
+            )
         ttk.Label(frame, text="\n".join(lines), font=("Yu Gothic UI", 14), justify="left").pack(pady=12)
         wrong = "、".join(f"{char}({number})" for char, number in self.session.wrong_chars.most_common(8)) or "なし"
         slow = sorted(self.session.timings, key=lambda item: item[3], reverse=True)[:5]

@@ -26,10 +26,12 @@ from test6 import (
     KeyPos,
     ProgressStore,
     Scheduler,
+    SentenceCursor,
     Session,
     State,
     TcodeEntry,
     lesson_chars,
+    load_lesson_texts,
     load_tcode_table,
     normalize_key,
 )
@@ -63,8 +65,18 @@ class DataTests(unittest.TestCase):
         lesson_set = set("".join(LESSONS.values()))
         self.assertFalse(lesson_set - table.keys())
         strokes = {(entry.first, entry.second) for entry in table.values()}
-        # The normalized dash alias intentionally shares the source stroke.
-        self.assertGreaterEqual(len(strokes), len(table) - 1)
+        # Two Unicode dash aliases intentionally share the source stroke.
+        self.assertGreaterEqual(len(strokes), len(table) - 2)
+
+    def test_lesson_5_text_and_all_sentence_characters(self):
+        texts = load_lesson_texts()
+        self.assertEqual(
+            "なにをしないでいたいの。ない。はい。いないが",
+            texts[5][0],
+        )
+        table = load_tcode_table()
+        for lines in texts.values():
+            SentenceCursor(lines, table)
 
 
 class StubRandom:
@@ -114,6 +126,59 @@ class SessionTests(unittest.TestCase):
         self.assertEqual("correction_done", session.correction_input(KeyPos(3, 3)))
         self.assertEqual(0, session.correct)
         self.assertEqual(1, session.corrections)
+
+
+class SentenceSessionTests(unittest.TestCase):
+    def setUp(self):
+        self.a = TcodeEntry(KeyPos(1, 1), KeyPos(2, 1))
+        self.b = TcodeEntry(KeyPos(3, 1), KeyPos(4, 1))
+        self.table = {"あ": self.a, "い": self.b}
+
+    def make_session(self, lines, clock_values):
+        values = iter(clock_values)
+        return Session(self.table, (), {}, 0, rng=StubRandom(),
+                       clock=lambda: next(values), sentence_lines=lines)
+
+    @staticmethod
+    def answer(session, entry):
+        session.normal_input(entry.first)
+        return session.normal_input(entry.second)
+
+    def test_source_order_spaces_and_line_boundaries(self):
+        session = self.make_session(["あ い", "あ"], [1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+        session.start()
+        self.assertEqual("あ", session.current)
+        self.assertEqual("correct", self.answer(session, self.a))
+        session.next_question()
+        self.assertEqual("い", session.current)
+        self.assertEqual("correct", self.answer(session, self.b))
+        session.next_question()
+        self.assertEqual("あ", session.current)
+        self.assertEqual(1, session.sentence.line_index)
+        self.assertEqual("correct", self.answer(session, self.a))
+        session.next_question()
+        self.assertEqual(State.RESULT, session.state)
+        self.assertEqual(2, session.sentence.completed_lines)
+        self.assertIsNone(session.scheduler)
+
+    def test_wrong_stays_until_correction_then_advances(self):
+        session = self.make_session(["あい"], [1, 2, 3, 4, 5, 6])
+        session.start()
+        session.normal_input(self.b.first)
+        self.assertEqual("wrong", session.normal_input(self.b.second))
+        self.assertEqual("あ", session.current)
+        self.assertEqual(0, session.sentence.char_index)
+        self.assertEqual("correction_first", session.correction_input(self.a.first))
+        self.assertEqual("correction_done", session.correction_input(self.a.second))
+        self.assertEqual("あ", session.current)
+        session.next_question()
+        self.assertEqual("い", session.current)
+        self.assertEqual(1, session.stats["あ"].attempts)
+        self.assertEqual(0, session.stats["あ"].correct_first_try)
+
+    def test_unknown_non_separator_is_rejected(self):
+        with self.assertRaises(ValueError):
+            SentenceCursor(["あ?"], self.table)
 
 
 class StorageTests(unittest.TestCase):
