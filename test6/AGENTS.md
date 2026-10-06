@@ -578,3 +578,155 @@ It must also provide:
 - results view
 
 Implement in phases when appropriate, but keep incomplete phases clearly identified.
+
+
+---
+
+# Sentence training mode
+
+Sentence training is part of the test6 MVP, not merely a future enhancement.
+
+The single-character trainer remains the primary learning mode, but the application must also support sequential lesson-text practice based on the eelll/JS `EELLLTXT` `text` arrays.
+
+Use sentence mode primarily from Lesson 5 onward.
+
+## Data model
+
+Lesson records should be able to hold both:
+
+```python
+chars
+text
+```
+
+These have different meanings:
+
+- `chars`: characters introduced/used for single-character lesson selection
+- `text`: ordered lesson practice lines for sentence mode
+
+Do not derive sentence text from `chars`.
+Do not invent new practice sentences when the eelll/JS source already provides the lesson text.
+
+When copying eelll/JS text data into this repository, preserve clear source attribution and applicable license information.
+
+## Shared input engine
+
+Do not implement a second answer engine for sentence mode.
+
+Sentence mode must reuse the same:
+
+- physical key normalization
+- two-stroke collection
+- coordinate comparison
+- error correction
+- timing
+- per-character statistics
+
+as single-character mode.
+
+Only the source of the next target character changes.
+
+Single-character mode gets the next character from the scheduler.
+
+Sentence mode gets the next character from the current lesson text position.
+
+## Sentence progression
+
+Track sentence position separately, for example:
+
+```python
+lesson_number
+line_index
+char_index
+```
+
+For each input target:
+
+1. highlight the current character in the displayed lesson line
+2. wait for stroke 1
+3. wait for stroke 2
+4. judge the two-stroke answer
+5. advance only on a correct first attempt or after required correction is completed
+
+A wrong answer must not advance the text cursor.
+
+Correction behavior is identical to single-character mode.
+
+## Separators
+
+ASCII spaces and line boundaries are display separators and should not normally require T-Code input.
+
+Skip explicit separators automatically.
+
+Do not silently skip an arbitrary character merely because it is missing from the T-Code table.
+
+If a non-separator character in lesson text is not representable by the current T-Code data, treat that as a data validation failure.
+
+Punctuation, full-width digits, kana, katakana, brackets, and other characters should be typed normally whenever they have a valid T-Code mapping.
+
+## Ordering
+
+Sentence mode follows the source text order.
+
+Do not use weighted random selection to reorder sentence characters.
+
+Do not inject the normal 3–7-question retry queue into the middle of lesson text.
+
+Still update the character's long-term `weight` and statistics after each first attempt.
+
+The learner already performs immediate correction after a wrong answer; later adaptive review belongs in single-character practice.
+
+## GUI
+
+SetupView should expose a clear training-form choice:
+
+```
+Single character
+Sentence
+```
+
+Sentence mode should show enough surrounding text to read naturally while clearly marking the current target character.
+
+Do not show the learner's QWERTY answer string.
+
+Keep the normal coordinate keyboard available.
+
+For sentence mode, useful progress indicators include:
+
+- current Lesson
+- current line
+- completed characters / total characters
+- current first-try accuracy
+
+## Sentence statistics
+
+Sentence answers update the same persistent per-character statistics as single-character answers.
+
+Session results should additionally be able to show:
+
+- completed lines
+- completed characters
+- elapsed time
+- characters per minute
+- first-try accuracy
+- errors
+- slowest characters
+
+Count one completed T-Code character as one character for characters-per-minute metrics, regardless of its two physical strokes.
+
+## Sentence-mode tests
+
+Add tests for:
+
+- loading Lesson 5 text
+- feeding characters in source order
+- advancing only after complete two-stroke answers
+- remaining on the same character after a wrong answer
+- advancing after successful correction
+- automatic ASCII-space skipping
+- rejecting unknown non-separator characters
+- moving across line boundaries
+- reaching result state at lesson end
+- updating shared character statistics
+- ensuring the weighted scheduler does not reorder lesson text
+
