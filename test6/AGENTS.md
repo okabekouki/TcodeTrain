@@ -730,3 +730,140 @@ Add tests for:
 - updating shared character statistics
 - ensuring the weighted scheduler does not reorder lesson text
 
+
+
+---
+
+# Random n-character training mode
+
+GitHub Issue #3 is part of the test6 specification.
+
+Interpret the requirement as:
+
+```
+At session setup, the user chooses n.
+Generate one random sequence containing exactly n target characters.
+Practice that fixed sequence from left to right.
+```
+
+This is distinct from both:
+
+- single-character adaptive/random practice
+- eelll/JS sentence-text practice
+
+## Sequence generation
+
+Build the source character pool using the existing lesson-selection logic or explicit character selection.
+
+Generate with replacement: the same character may appear more than once.
+
+A pool smaller than `n` is valid.
+
+Keep random-sequence generation outside tkinter code and make the RNG injectable or seedable for tests.
+
+Do not silently generate from characters outside the selected source pool.
+
+## Fixed ordering
+
+Generate the full sequence once at session start.
+
+After generation, preserve its exact order.
+
+Do not use the weighted scheduler to reorder it.
+Do not inject the normal delayed retry queue into the middle of the sequence.
+
+Still update persistent per-character weight/statistics after each first attempt.
+
+## Shared input engine
+
+Reuse the existing two-stroke input and correction state machine.
+
+For every sequence position:
+
+```
+stroke 1
+stroke 2
+judge
+```
+
+Correct input advances one position.
+
+Wrong input must keep the current sequence position unchanged until correction is completed.
+
+Correction input does not count as a first-try correct answer.
+
+Do not implement a separate keyboard engine just for this mode.
+
+## State
+
+Keep at least:
+
+```python
+random_sequence
+sequence_index
+```
+
+The target character comes from the current sequence index.
+
+Pause/resume must preserve both values.
+
+## Setup UI
+
+Expose a third training-form option:
+
+```
+Single character
+Sentence
+Random n characters
+```
+
+When Random n characters is selected, provide:
+
+- character-source selection
+- integer length n
+
+Reject invalid `n` and empty character pools before session start.
+
+## Training UI
+
+Show the generated sequence or a readable window around the current position.
+
+The current target character must be clearly highlighted.
+
+Long sequences must remain readable using wrapping or a moving viewport.
+
+Do not expose QWERTY answer text.
+
+## Statistics
+
+Random n-character mode updates the same persistent character statistics as the other modes.
+
+Session results should include at least:
+
+- requested n
+- completed characters
+- first-try accuracy
+- errors
+- elapsed time
+- characters per minute
+- timing aggregates
+
+## Tests
+
+Cover at least:
+
+- output length exactly equals n
+- all generated characters belong to the source pool
+- duplicate characters are allowed
+- deterministic generation with a fixed seed
+- correct two-stroke input advances one position
+- one stroke alone does not advance
+- a wrong answer does not advance
+- correction success advances
+- generated ordering remains unchanged
+- scheduler/retry queue do not alter the fixed sequence
+- final character transitions to result state
+- shared character statistics are updated
+- invalid n is rejected
+- empty source pool is rejected
+
