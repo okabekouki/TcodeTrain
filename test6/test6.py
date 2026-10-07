@@ -47,6 +47,7 @@ MAX_WEIGHT = 8.0
 RECENT_LIMIT = 2
 RETRY_MIN = 3
 RETRY_MAX = 7
+MAX_RANDOM_SEQUENCE_LENGTH = 1000
 
 
 @dataclass(frozen=True, order=True)
@@ -113,6 +114,21 @@ def lesson_chars(start: int, end: int | None = None) -> list[str]:
     end = start if end is None else end
     numbers = [number for number in sorted(LESSONS) if start <= number <= end]
     return list(dict.fromkeys("".join(LESSONS[number] for number in numbers)))
+
+
+def make_random_sequence(
+    chars: Iterable[str],
+    length: int,
+    rng: random.Random | None = None,
+) -> list[str]:
+    """Generate a fixed-length sequence with replacement from the given pool."""
+    pool = list(dict.fromkeys(chars))
+    if not pool:
+        raise ValueError("ランダム列の候補文字がありません")
+    if not isinstance(length, int) or isinstance(length, bool) or not (1 <= length <= MAX_RANDOM_SEQUENCE_LENGTH):
+        raise ValueError(f"文字数は1～{MAX_RANDOM_SEQUENCE_LENGTH}の整数にしてください")
+    generator = rng or random.Random()
+    return [generator.choice(pool) for _ in range(length)]
 
 
 def load_lesson_texts(path: Path = LESSON_TEXT_PATH) -> dict[int, list[str]]:
@@ -203,8 +219,18 @@ class ProgressStore:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         payload = {"version": 1, "chars": {char: asdict(value) for char, value in sorted(stats.items())}}
         temporary = self.path.with_suffix(".tmp")
-        temporary.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-        temporary.replace(self.path)
+        serialized = json.dumps(payload, ensure_ascii=False, indent=2)
+        temporary.write_text(serialized, encoding="utf-8")
+        try:
+            temporary.replace(self.path)
+        except OSError:
+            # Some restricted Windows folders reject atomic replace even when
+            # ordinary writes are allowed. Preserve functionality there.
+            self.path.write_text(serialized, encoding="utf-8")
+            try:
+                temporary.unlink()
+            except OSError:
+                pass
 
 
 class Scheduler:
@@ -290,6 +316,32 @@ class SentenceCursor:
         self.done = True
 
 
+class RandomSequenceCursor:
+    """Keep a generated random sequence in its original fixed order."""
+
+    def __init__(self, sequence: Iterable[str], table: dict[str, TcodeEntry]):
+        self.sequence = list(sequence)
+        if not self.sequence:
+            raise ValueError("ランダム列が空です")
+        unknown = sorted(set(self.sequence) - table.keys())
+        if unknown:
+            raise ValueError("ランダム列にT-Code未対応文字があります: " + " ".join(unknown))
+        self.sequence_index = 0
+        self.done = False
+
+    @property
+    def current(self) -> str:
+        if self.done:
+            raise IndexError("random sequence is complete")
+        return self.sequence[self.sequence_index]
+
+    def advance(self) -> None:
+        if self.done:
+            return
+        self.sequence_index += 1
+        self.done = self.sequence_index >= len(self.sequence)
+
+
 class Session:
     def __init__(
         self,
@@ -300,12 +352,21 @@ class Session:
         rng: random.Random | None = None,
         clock: Callable[[], float] = time.perf_counter,
         sentence_lines: Iterable[str] | None = None,
+        random_sequence: Iterable[str] | None = None,
     ):
+        if sentence_lines is not None and random_sequence is not None:
+            raise ValueError("文章とランダム列は同時に指定できません")
         self.table = table
         self.stats = stats
         self.sentence = SentenceCursor(sentence_lines, table) if sentence_lines is not None else None
-        self.limit = self.sentence.total_chars if self.sentence else question_limit
-        self.scheduler = None if self.sentence else Scheduler(chars, stats, rng)
+        self.random_sequence = RandomSequenceCursor(random_sequence, table) if random_sequence is not None else None
+        if self.sentence:
+            self.limit = self.sentence.total_chars
+        elif self.random_sequence:
+            self.limit = len(self.random_sequence.sequence)
+        else:
+            self.limit = question_limit
+        self.scheduler = None if self.sentence or self.random_sequence else Scheduler(chars, stats, rng)
         self.clock = clock
         self.state = State.SETUP
         self.current = ""
@@ -315,11 +376,15 @@ class Session:
         self.timings: list[tuple[str, float, float, float]] = []
         self.wrong_chars: Counter[str] = Counter()
         self.started_at = self.finished_at = 0.0
-        self._advance_sentence = False
+        self._advance_fixed = False
 
     @property
     def is_sentence(self) -> bool:
         return self.sentence is not None
+
+    @property
+    def is_random_sequence(self) -> bool:
+        return self.random_sequence is not None
 
     @property
     def entry(self) -> TcodeEntry:
@@ -329,10 +394,17 @@ class Session:
         self.next_question()
 
     def next_question(self) -> None:
-        if self.sentence and self._advance_sentence:
-            self.sentence.advance()
-            self._advance_sentence = False
+        if self._advance_fixed:
+            if self.sentence:
+                self.sentence.advance()
+            elif self.random_sequence:
+                self.random_sequence.advance()
+            self._advance_fixed = False
         if self.sentence and self.sentence.done:
+            self.finished_at = self.clock()
+            self.state = State.RESULT
+            return
+        if self.random_sequence and self.random_sequence.done:
             self.finished_at = self.clock()
             self.state = State.RESULT
             return
@@ -342,6 +414,8 @@ class Session:
             return
         if self.sentence:
             self.current = self.sentence.current
+        elif self.random_sequence:
+            self.current = self.random_sequence.current
         else:
             assert self.scheduler is not None
             self.current = self.scheduler.choose()
@@ -375,7 +449,7 @@ class Session:
             stat.correct_first_try += 1
             stat.weight = max(MIN_WEIGHT, stat.weight * CORRECT_FACTOR)
             self.correct += 1
-            self._advance_sentence = self.sentence is not None
+            self._advance_fixed = self.sentence is not None or self.random_sequence is not None
             self.state = State.CORRECT_FEEDBACK
             return "correct"
         stat.wrong += 1
@@ -395,7 +469,7 @@ class Session:
         if self.state == State.CORRECTION_SECOND:
             if pos == self.entry.second:
                 self.corrections += 1
-                self._advance_sentence = self.sentence is not None
+                self._advance_fixed = self.sentence is not None or self.random_sequence is not None
                 return "correction_done"
             self.state = State.CORRECTION_FIRST
             return "correction_restart"
@@ -464,13 +538,14 @@ class TcodeTrainApp(tk.Tk):
         self.direct_var = tk.StringVar()
         rows = [
             ("練習形式", ttk.Combobox(form, textvariable=self.form_var, state="readonly", width=22,
-             values=("単字", "文章"))),
+             values=("単字", "文章", "ランダム n 文字"))),
             ("練習モード", ttk.Combobox(form, textvariable=self.mode_var, state="readonly", width=22,
              values=("単一Lesson", "Lesson範囲", "苦手文字", "文字直接指定", "全対象文字"))),
             ("開始Lesson", ttk.Combobox(form, textvariable=self.start_var, state="readonly", width=22, values=lesson_values)),
             ("終了Lesson", ttk.Combobox(form, textvariable=self.end_var, state="readonly", width=22, values=lesson_values)),
             ("直接指定", ttk.Entry(form, textvariable=self.direct_var, width=25)),
-            ("出題数", ttk.Spinbox(form, from_=1, to=999, textvariable=self.count_var, width=23)),
+            ("出題数 / 文字数 n", ttk.Spinbox(form, from_=1, to=MAX_RANDOM_SEQUENCE_LENGTH,
+                                      textvariable=self.count_var, width=23)),
             ("ヒント", ttk.Combobox(form, textvariable=self.hint_var, state="readonly", width=22,
              values=(0, 1, 2, 3))),
         ]
@@ -515,6 +590,14 @@ class TcodeTrainApp(tk.Tk):
                 lines = self.lesson_texts[lesson]
                 self.session_label = f"文章 Lesson {lesson}"
                 self.session = Session(self.table, (), self.stats, 0, sentence_lines=lines)
+            elif self.form_var.get() == "ランダム n 文字":
+                if self.mode_var.get() not in {"単一Lesson", "Lesson範囲", "文字直接指定"}:
+                    raise ValueError("ランダム n 文字では単一Lesson・Lesson範囲・文字直接指定を選んでください")
+                chars, source_label = self.selected_chars()
+                length = int(self.count_var.get())
+                sequence = make_random_sequence(chars, length)
+                self.session_label = f"ランダム {length}文字（{source_label}）"
+                self.session = Session(self.table, (), self.stats, 0, random_sequence=sequence)
             else:
                 chars, self.session_label = self.selected_chars()
                 if not chars:
@@ -545,7 +628,7 @@ class TcodeTrainApp(tk.Tk):
                                      relief="flat", borderwidth=0, cursor="arrow")
         self.sentence_text.tag_configure("current", background="#ffd966", underline=True,
                                          font=("Yu Gothic UI", 21, "bold"))
-        if self.session and self.session.is_sentence:
+        if self.session and (self.session.is_sentence or self.session.is_random_sequence):
             self.char_text.pack_forget()
             self.sentence_text.pack(fill="x", padx=30, pady=(38, 12))
         self.status_text = ttk.Label(frame, font=("Yu Gothic UI", 16), anchor="center")
@@ -591,6 +674,17 @@ class TcodeTrainApp(tk.Tk):
             self.sentence_text.tag_add("current", start, f"{start}+1c")
             self.sentence_text.see(start)
             self.sentence_text.configure(state="disabled")
+        elif self.session.is_random_sequence:
+            assert self.session.random_sequence is not None
+            cursor = self.session.random_sequence
+            sequence = "".join(cursor.sequence)
+            self.sentence_text.configure(state="normal")
+            self.sentence_text.delete("1.0", "end")
+            self.sentence_text.insert("1.0", sequence)
+            start = f"1.{cursor.sequence_index}"
+            self.sentence_text.tag_add("current", start, f"{start}+1c")
+            self.sentence_text.see(start)
+            self.sentence_text.configure(state="disabled")
         else:
             self.char_text.configure(text=self.session.current)
         self.status_text.configure(text="第1打鍵待ち")
@@ -612,6 +706,8 @@ class TcodeTrainApp(tk.Tk):
             self.progress_text.configure(
                 text=f"行 {line}/{line_total}　{done}/{total}文字　初回正答率 {rate:.0f}%"
             )
+        elif self.session.is_random_sequence:
+            self.progress_text.configure(text=f"{done}/{total}文字　初回正答率 {rate:.0f}%")
         else:
             self.progress_text.configure(text=f"{done} / {total}　初回正答率 {rate:.0f}%")
 
@@ -685,14 +781,14 @@ class TcodeTrainApp(tk.Tk):
             f"訂正完了数: {self.session.corrections}", f"平均総反応時間: {averages[2]:.0f} ms",
             f"平均第1打鍵: {averages[0]:.0f} ms", f"平均第2打鍵間隔: {averages[1]:.0f} ms",
         )
-        if self.session.is_sentence and self.session.sentence:
+        if (self.session.is_sentence and self.session.sentence) or self.session.is_random_sequence:
             elapsed = max(0.0, self.session.finished_at - self.session.started_at)
             per_minute = count / elapsed * 60 if elapsed else 0.0
-            lines += (
-                f"完了行数: {self.session.sentence.completed_lines}",
-                f"総所要時間: {elapsed:.1f} 秒",
-                f"入力速度: {per_minute:.1f} 文字/分",
-            )
+            if self.session.is_sentence and self.session.sentence:
+                lines += (f"完了行数: {self.session.sentence.completed_lines}",)
+            else:
+                lines += (f"指定文字数: {self.session.limit}",)
+            lines += (f"総所要時間: {elapsed:.1f} 秒", f"入力速度: {per_minute:.1f} 文字/分")
         ttk.Label(frame, text="\n".join(lines), font=("Yu Gothic UI", 14), justify="left").pack(pady=12)
         wrong = "、".join(f"{char}({number})" for char, number in self.session.wrong_chars.most_common(8)) or "なし"
         slow = sorted(self.session.timings, key=lambda item: item[3], reverse=True)[:5]

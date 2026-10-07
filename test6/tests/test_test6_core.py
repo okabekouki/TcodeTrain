@@ -1,6 +1,7 @@
 import tempfile
 import unittest
 from pathlib import Path
+import random
 import sys
 import types
 
@@ -25,6 +26,7 @@ from test6 import (
     CharStats,
     KeyPos,
     ProgressStore,
+    RandomSequenceCursor,
     Scheduler,
     SentenceCursor,
     Session,
@@ -33,6 +35,7 @@ from test6 import (
     lesson_chars,
     load_lesson_texts,
     load_tcode_table,
+    make_random_sequence,
     normalize_key,
 )
 
@@ -98,6 +101,29 @@ class SchedulerTests(unittest.TestCase):
         scheduler.choose()
         scheduler.choose()
         self.assertEqual("a", scheduler.choose())
+
+
+class RandomSequenceTests(unittest.TestCase):
+    def test_exact_length_pool_membership_duplicates_and_seed(self):
+        first = make_random_sequence("abc", 100, random.Random(1234))
+        second = make_random_sequence("abc", 100, random.Random(1234))
+        self.assertEqual(100, len(first))
+        self.assertEqual(first, second)
+        self.assertLessEqual(set(first), set("abc"))
+        self.assertEqual(["あ"] * 100, make_random_sequence("あ", 100, random.Random(1)))
+        self.assertEqual(1, len(make_random_sequence("abc", 1, random.Random(1))))
+
+    def test_invalid_length_and_empty_pool(self):
+        for length in (0, -1, 1001, True):
+            with self.subTest(length=length), self.assertRaises(ValueError):
+                make_random_sequence("abc", length, random.Random(1))
+        with self.assertRaises(ValueError):
+            make_random_sequence("", 1, random.Random(1))
+
+    def test_unknown_character_is_rejected(self):
+        table = {"あ": TcodeEntry(KeyPos(1, 1), KeyPos(2, 1))}
+        with self.assertRaises(ValueError):
+            RandomSequenceCursor("あ?", table)
 
 
 class SessionTests(unittest.TestCase):
@@ -179,6 +205,52 @@ class SentenceSessionTests(unittest.TestCase):
     def test_unknown_non_separator_is_rejected(self):
         with self.assertRaises(ValueError):
             SentenceCursor(["あ?"], self.table)
+
+
+class RandomSequenceSessionTests(unittest.TestCase):
+    def setUp(self):
+        self.a = TcodeEntry(KeyPos(1, 1), KeyPos(2, 1))
+        self.b = TcodeEntry(KeyPos(3, 1), KeyPos(4, 1))
+        self.table = {"あ": self.a, "い": self.b}
+
+    def make_session(self, clock_values):
+        values = iter(clock_values)
+        return Session(self.table, (), {}, 0, clock=lambda: next(values),
+                       random_sequence=["あ", "い"])
+
+    def test_fixed_order_one_stroke_and_result(self):
+        session = self.make_session([1, 2, 3, 4, 5, 6, 7])
+        original = list(session.random_sequence.sequence)
+        session.start()
+        self.assertEqual("あ", session.current)
+        session.normal_input(self.a.first)
+        self.assertEqual(0, session.random_sequence.sequence_index)
+        self.assertEqual("correct", session.normal_input(self.a.second))
+        session.next_question()
+        self.assertEqual(1, session.random_sequence.sequence_index)
+        self.assertEqual("い", session.current)
+        session.normal_input(self.b.first)
+        self.assertEqual("correct", session.normal_input(self.b.second))
+        session.next_question()
+        self.assertEqual(State.RESULT, session.state)
+        self.assertEqual(original, session.random_sequence.sequence)
+        self.assertIsNone(session.scheduler)
+        self.assertEqual(1, session.stats["あ"].correct_first_try)
+
+    def test_wrong_waits_for_correction_and_has_no_retry_queue(self):
+        session = self.make_session([1, 2, 3, 4])
+        session.start()
+        session.normal_input(self.b.first)
+        self.assertEqual("wrong", session.normal_input(self.b.second))
+        self.assertEqual(0, session.random_sequence.sequence_index)
+        self.assertEqual("correction_first", session.correction_input(self.a.first))
+        self.assertEqual("correction_done", session.correction_input(self.a.second))
+        self.assertEqual(0, session.random_sequence.sequence_index)
+        session.next_question()
+        self.assertEqual(1, session.random_sequence.sequence_index)
+        self.assertEqual("い", session.current)
+        self.assertIsNone(session.scheduler)
+        self.assertEqual(1, session.stats["あ"].wrong)
 
 
 class StorageTests(unittest.TestCase):
